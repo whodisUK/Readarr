@@ -219,6 +219,8 @@ namespace NzbDrone.Core.Parser
 
         private static readonly Regex AfterDashRegex = new Regex(@"[-:].*", RegexOptions.Compiled);
 
+        private static readonly Regex CalibreIdRegex = new Regex(@"\((?<id>\d+)\)", RegexOptions.Compiled);
+
         public static ParsedTrackInfo ParseMusicPath(string path)
         {
             var fileInfo = new FileInfo(path);
@@ -291,7 +293,7 @@ namespace NzbDrone.Core.Parser
 
                             if (result != null)
                             {
-                                result.Quality = QualityParser.ParseQuality(title, null, 0);
+                                result.Quality = QualityParser.ParseQuality(title);
                                 Logger.Debug("Quality parsed: {0}", result.Quality);
 
                                 return result;
@@ -317,7 +319,7 @@ namespace NzbDrone.Core.Parser
             return null;
         }
 
-        public static ParsedAlbumInfo ParseAlbumTitleWithSearchCriteria(string title, Artist artist, List<Album> album)
+        public static ParsedAlbumInfo ParseAlbumTitleWithSearchCriteria(string title, Author artist, List<Book> album)
         {
             try
             {
@@ -356,7 +358,7 @@ namespace NzbDrone.Core.Parser
 
                         if (result != null)
                         {
-                            result.Quality = QualityParser.ParseQuality(title, null, 0);
+                            result.Quality = QualityParser.ParseQuality(title);
                             Logger.Debug("Quality parsed: {0}", result.Quality);
 
                             result.ReleaseGroup = ParseReleaseGroup(releaseTitle);
@@ -394,6 +396,15 @@ namespace NzbDrone.Core.Parser
 
             Logger.Debug("Unable to parse {0}", title);
             return null;
+        }
+
+        public static int ParseCalibreId(this string path)
+        {
+            var bookFolder = path.GetParentPath();
+
+            var match = CalibreIdRegex.Match(bookFolder);
+
+            return match.Success ? int.Parse(match.Groups["id"].Value) : 0;
         }
 
         public static ParsedAlbumInfo ParseAlbumTitle(string title)
@@ -450,7 +461,7 @@ namespace NzbDrone.Core.Parser
 
                             if (result != null)
                             {
-                                result.Quality = QualityParser.ParseQuality(title, null, 0);
+                                result.Quality = QualityParser.ParseQuality(title);
                                 Logger.Debug("Quality parsed: {0}", result.Quality);
 
                                 result.ReleaseGroup = ParseReleaseGroup(releaseTitle);
@@ -562,7 +573,7 @@ namespace NzbDrone.Core.Parser
             title = FileExtensionRegex.Replace(title, m =>
                 {
                     var extension = m.Value.ToLower();
-                    if (MediaFiles.MediaFileExtensions.Extensions.Contains(extension) || new[] { ".par2", ".nzb" }.Contains(extension))
+                    if (MediaFiles.MediaFileExtensions.AllExtensions.Contains(extension) || new[] { ".par2", ".nzb" }.Contains(extension))
                     {
                         return string.Empty;
                     }
@@ -653,7 +664,6 @@ namespace NzbDrone.Core.Parser
             ParsedTrackInfo result = new ParsedTrackInfo();
 
             result.ArtistTitle = artistName;
-            result.ArtistTitleInfo = GetArtistTitleInfo(result.ArtistTitle);
 
             Logger.Debug("Track Parsed. {0}", result);
             return result;
